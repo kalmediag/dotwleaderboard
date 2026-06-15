@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Entity Designs DOTW Leaderboard</title>
+    <meta name="description" content="Entity Designs DOTW leaderboard and design archive.">
+    <meta name="theme-color" content="#2563eb">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Entity Designs">
+    <meta property="og:title" content="Entity Designs DOTW Leaderboard">
+    <meta property="og:description" content="Browse Entity Designs DOTW rankings, designer profiles, and archived winning designs.">
+    <meta name="twitter:card" content="summary">
+    <link rel="stylesheet" href="dotw/styles/main.css">
+    <script type="module" src="dotw/scripts/app.js" defer></script>
+  </head>
+  <body data-page="leaderboard" data-base="dotw">
+    <main class="page">
+      <section class="shell" aria-labelledby="page-title">
+        <header class="masthead">
+          <div>
+            <p class="eyebrow">Entity Designs</p>
+            <h1 id="page-title">DOTW Leaderboard</h1>
+            <p class="brandline"><strong>Entity Designs</strong> Discord community rankings and archive.</p>
+          </div>
+          <div class="summary" aria-label="Leaderboard summary">
+            <a class="button-link summary-link" href="dotw/weeks/">View Weeks</a>
+            <a class="discord-link" href="https://discord.gg/8NfuvaSjdy" target="_blank" rel="noopener noreferrer">Join Discord</a>
+            <div class="stat">
+              <span>Leader</span>
+              <strong>Xhawkzy</strong>
+            </div>
+            <div class="stat">
+              <span>Wins</span>
+              <strong>53</strong>
+            </div>
+            <div class="stat">
+              <span>Points</span>
+              <strong>189</strong>
+            </div>
+          </div>
+        </header>
+
+        <section class="leaderboard" aria-label="DOTW leaderboard table">
+          <div class="toolbar" data-leaderboard-search></div>
+          <div class="table-wrap">
+            <table>
+              <caption>Entity Designs designer rankings by wins, podium finishes, and total points. Click a designer to open their DOTW archive.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Designer</th>
+                  <th scope="col">Wins</th>
+                  <th scope="col">2nd</th>
+                  <th scope="col">3rd</th>
+                  <th scope="col">Pts</th>
+                </tr>
+              </thead>
+              <tbody data-leaderboard-body></tbody>
+            </table>
+          </div>
+          <footer class="footer">
+            <span>Points system</span>
+            <span class="points">1st = 3 pts | 2nd = 2 pts | 3rd = 1 pt</span>
+          </footer>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
