@@ -117,6 +117,8 @@ ALIASES = {
     "myles": "Myles",
     "impface": "Impface",
     "i b a g impface™": "Impface",
+    "xao": "xao",
+    "xaodev": "xao",
 }
 
 
@@ -136,6 +138,31 @@ def normalize_name(value):
         return ""
     clean = value.lstrip("@").strip()
     return ALIASES.get(clean.lower(), clean)
+
+
+def find_user_for_name(users, name):
+    for user in users.values():
+        names = [normalize_name(user.get("displayName")), normalize_name(user.get("username"))]
+        if name in names:
+            return user
+    return None
+
+
+def designer_record(name, users, rank=None, wins=0, second=0, third=0, points=0, leaderboard=False):
+    slug = slugify(name)
+    user = find_user_for_name(users, name)
+    local_avatar = f"images/profiles/{slug}.png"
+    return {
+        "rank": rank,
+        "name": name,
+        "slug": slug,
+        "wins": wins,
+        "second": second,
+        "third": third,
+        "points": points,
+        "leaderboard": leaderboard,
+        "avatar": local_avatar if (ROOT / local_avatar).exists() else (user.get("avatarUrl") if user else local_avatar),
+    }
 
 
 def parse_date(timestamp):
@@ -182,10 +209,10 @@ def resolve_image_path(image_path):
     if not image_path:
         return ""
     original = ROOT / image_path
-    if original.exists():
+    if original.is_file():
         return image_path
     optimized = original.with_suffix(".jpg")
-    if optimized.exists():
+    if optimized.is_file():
         return str(optimized.relative_to(ROOT))
     return ""
 
@@ -215,26 +242,7 @@ def main():
 
     leaderboard = []
     for index, (name, wins, second, third, points) in enumerate(LEADERBOARD, start=1):
-        slug = slugify(name)
-        matched_user = None
-        for user in users.values():
-            names = [normalize_name(user.get("displayName")), normalize_name(user.get("username"))]
-            if name in names:
-                matched_user = user
-                break
-        local_avatar = f"images/profiles/{slug}.png"
-        leaderboard.append(
-            {
-                "rank": index,
-                "name": name,
-                "slug": slug,
-                "wins": wins,
-                "second": second,
-                "third": third,
-                "points": points,
-                "avatar": local_avatar if (ROOT / local_avatar).exists() else (matched_user.get("avatarUrl") if matched_user else local_avatar),
-            }
-        )
+        leaderboard.append(designer_record(name, users, index, wins, second, third, points, True))
 
     entries = []
     weeks = {}
@@ -280,13 +288,16 @@ def main():
         rating_match = re.search(r"(\d+(?:\.\d+)?)\s*/\s*10", text)
         slug = slugify(designer)
         entry_id = f"week-{weeks[judged_date]:03d}-{slug}-{placement}-{message_id}"
+        collaborators = [name for name in mentions[1:] if name != designer]
+        if message_id == "1322434270593290291" and "xao" not in collaborators:
+            collaborators.append("xao")
 
         entries.append(
             {
                 "id": entry_id,
                 "designer": designer,
                 "designerSlug": slug,
-                "collaborators": [name for name in mentions[1:] if name != designer],
+                "collaborators": collaborators,
                 "week": weeks[judged_date],
                 "dateJudged": judged_date,
                 "placement": placement,
@@ -302,17 +313,41 @@ def main():
         )
 
     (ROOT / "data").mkdir(exist_ok=True)
+    designers_by_slug = {designer["slug"]: designer for designer in leaderboard}
+    for entry in entries:
+        if entry["designerSlug"] not in designers_by_slug:
+            designers_by_slug[entry["designerSlug"]] = designer_record(entry["designer"], users)
+        for collaborator in entry["collaborators"]:
+            collaborator_slug = slugify(collaborator)
+            if collaborator_slug and collaborator_slug not in designers_by_slug:
+                designers_by_slug[collaborator_slug] = designer_record(collaborator, users)
+
+    for designer in designers_by_slug.values():
+        if designer["leaderboard"]:
+            continue
+        related = [entry for entry in entries if entry["designerSlug"] == designer["slug"]]
+        designer["wins"] = sum(1 for entry in related if entry["placement"] == 1)
+        designer["second"] = sum(1 for entry in related if entry["placement"] == 2)
+        designer["third"] = sum(1 for entry in related if entry["placement"] == 3)
+        designer["points"] = sum(entry["points"] for entry in related)
+
+    designers = sorted(
+        designers_by_slug.values(),
+        key=lambda designer: (not designer["leaderboard"], designer["rank"] or 9999, designer["name"].lower()),
+    )
+
     (ROOT / "data" / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2) + "\n", encoding="utf-8")
+    (ROOT / "data" / "designers.json").write_text(json.dumps(designers, indent=2) + "\n", encoding="utf-8")
     (ROOT / "data" / "entries.json").write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
 
     (ROOT / "designers").mkdir(exist_ok=True)
     (ROOT / "designers" / "index.html").write_text(PROFILE_PAGE, encoding="utf-8")
-    for designer in leaderboard:
+    for designer in designers:
         folder = ROOT / designer["slug"]
         folder.mkdir(exist_ok=True)
         (folder / "index.html").write_text(PROFILE_PAGE, encoding="utf-8")
 
-    print(f"Wrote {len(leaderboard)} leaderboard rows and {len(entries)} archive entries.")
+    print(f"Wrote {len(leaderboard)} leaderboard rows, {len(designers)} designer pages, and {len(entries)} archive entries.")
 
 
 if __name__ == "__main__":

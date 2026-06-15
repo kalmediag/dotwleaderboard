@@ -2123,7 +2123,9 @@
     "id": "week-021-jb-4-1322434270593290291",
     "designer": "JB",
     "designerSlug": "jb",
-    "collaborators": [],
+    "collaborators": [
+      "xao"
+    ],
     "week": 21,
     "dateJudged": "2024-12-28",
     "placement": 4,

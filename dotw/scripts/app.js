@@ -1,13 +1,15 @@
 const body = document.body;
 const base = body.dataset.base || ".";
+const assetVersion = "20260615-jpg";
 
 const state = {
   leaderboard: [],
+  designers: [],
   entries: [],
 };
 
 const readJson = async (file) => {
-  const response = await fetch(`${base}/data/${file}`);
+  const response = await fetch(`${base}/data/${file}?v=${assetVersion}`);
   if (!response.ok) throw new Error(`Could not load ${file}`);
   return response.json();
 };
@@ -15,7 +17,7 @@ const readJson = async (file) => {
 const asset = (assetPath) => {
   if (!assetPath) return "";
   if (/^https?:\/\//.test(assetPath)) return assetPath;
-  return `${base}/${assetPath}`;
+  return `${base}/${assetPath}?v=${assetVersion}`;
 };
 
 const slugify = (value) =>
@@ -66,6 +68,22 @@ const searchUrl = (params = {}) => {
   });
   const query = next.toString();
   return query ? `?${query}` : window.location.pathname;
+};
+
+const renderFloatingBack = () => {
+  if (body.dataset.page === "leaderboard" || document.querySelector("[data-floating-back]")) return;
+
+  body.classList.add("has-floating-back");
+  body.insertAdjacentHTML(
+    "afterbegin",
+    `<a class="floating-back" href="${base}/" data-floating-back aria-label="Go back">&larr; Back</a>`,
+  );
+
+  document.querySelector("[data-floating-back]").addEventListener("click", (event) => {
+    if (window.history.length <= 1) return;
+    event.preventDefault();
+    window.history.back();
+  });
 };
 
 const sortEntries = (entries, sort = currentSort()) =>
@@ -260,8 +278,10 @@ const renderDesigner = () => {
   if (!mount) return;
 
   const slug = currentDesignerSlug();
-  const designer = state.leaderboard.find((item) => item.slug === slug);
-  const entries = sortEntries(state.entries.filter((entry) => entry.designerSlug === slug));
+  const designer = state.designers.find((item) => item.slug === slug);
+  const entries = sortEntries(
+    state.entries.filter((entry) => entry.designerSlug === slug || entry.collaborators.some((name) => slugify(name) === slug)),
+  );
 
   if (!designer) {
     mount.innerHTML = `
@@ -294,7 +314,7 @@ const renderDesigner = () => {
     <section class="archive-panel" style="margin-top:18px">
       <header class="archive-panel-header">
         <h2>DOTW Designs</h2>
-        <span class="archive-count">${entries.length} archived designs</span>
+        <span class="archive-count">${entries.length} related designs</span>
       </header>
       ${
         entries.length
@@ -320,7 +340,7 @@ const renderDetail = () => {
     return;
   }
 
-  const designer = state.leaderboard.find((item) => item.slug === entry.designerSlug);
+  const designer = state.designers.find((item) => item.slug === entry.designerSlug);
   document.title = `Week ${entry.week} ${entry.designer} Design | Entity Designs DOTW`;
   mount.innerHTML = `
     <header class="masthead">
@@ -335,10 +355,10 @@ const renderDetail = () => {
       <div class="design-detail-media">${imageMarkup(entry.localImage || entry.image, entry.imageAlt || `${entry.designer} DOTW design`)}</div>
       <aside class="detail-panel">
         <div class="detail-panel-inner">
-          <div class="designer-cell">
+          <a class="designer-cell" href="${base}/${entry.designerSlug}/">
             ${avatarMarkup(designer || { name: entry.designer })}
             <strong>${entry.designer}</strong>
-          </div>
+          </a>
           <div class="detail-list">
             <div class="detail-item"><span>Placement</span><span>${placementLabel(entry.placement)}</span></div>
             <div class="detail-item"><span>Rating</span><span>${entry.rating ? `${entry.rating}/10` : "No rating"}</span></div>
@@ -348,7 +368,6 @@ const renderDetail = () => {
             <div class="detail-item"><span>Collaborators</span><span>${entry.collaborators.length ? entry.collaborators.join(", ") : "None listed"}</span></div>
           </div>
           <p class="brandline">${entry.notes || "No notes provided."}</p>
-          ${entry.source ? `<p><a class="button-link" href="${asset(entry.source)}">Open source message</a></p>` : ""}
         </div>
       </aside>
     </section>
@@ -357,8 +376,13 @@ const renderDetail = () => {
 
 const init = async () => {
   try {
-    const [leaderboard, entries] = await Promise.all([readJson("leaderboard.json"), readJson("entries.json")]);
+    const [leaderboard, designers, entries] = await Promise.all([
+      readJson("leaderboard.json"),
+      readJson("designers.json"),
+      readJson("entries.json"),
+    ]);
     state.leaderboard = leaderboard;
+    state.designers = designers;
     state.entries = entries;
     renderLeaderboard();
     renderDesigner();
@@ -369,4 +393,5 @@ const init = async () => {
   }
 };
 
+renderFloatingBack();
 init();
