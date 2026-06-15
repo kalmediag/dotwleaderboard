@@ -178,6 +178,18 @@ def load_export_data(source):
     return json.loads(match.group(1))
 
 
+def resolve_image_path(image_path):
+    if not image_path:
+        return ""
+    original = ROOT / image_path
+    if original.exists():
+        return image_path
+    optimized = original.with_suffix(".jpg")
+    if optimized.exists():
+        return str(optimized.relative_to(ROOT))
+    return ""
+
+
 PROFILE_PAGE = """<!doctype html>
 <html lang="en">
   <head>
@@ -264,7 +276,7 @@ def main():
 
         image_match = re.search(r'<img class="attachment-preview attachment-preview-img" src="([^"]+)" alt="([^"]*)"', block)
         image_path = image_match.group(1) if image_match else ""
-        image_exists = bool(image_path and (ROOT / image_path).exists())
+        resolved_image_path = resolve_image_path(image_path)
         rating_match = re.search(r"(\d+(?:\.\d+)?)\s*/\s*10", text)
         slug = slugify(designer)
         entry_id = f"week-{weeks[judged_date]:03d}-{slug}-{placement}-{message_id}"
@@ -280,8 +292,8 @@ def main():
                 "placement": placement,
                 "points": points_for(placement),
                 "rating": float(rating_match.group(1)) if rating_match else None,
-                "image": image_path if image_exists else "",
-                "localImage": image_path if image_exists else "",
+                "image": resolved_image_path,
+                "localImage": resolved_image_path,
                 "imageAlt": html.unescape(image_match.group(2)) if image_match else "",
                 "exportedImage": image_path,
                 "source": f"dotw-page-1.html#msg-{message_id}",
